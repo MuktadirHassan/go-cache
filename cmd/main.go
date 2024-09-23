@@ -67,7 +67,8 @@ var cache = NewCache()
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	targetURLParam := r.URL.Query().Get("target")
 	if targetURLParam == "" {
-		http.Error(w, "Missing 'target' query parameter", http.StatusBadRequest)
+		usage := " Usage: ?target=<URL> (e.g., ?target=https://example.com)"
+		http.Error(w, "Up and running!"+usage, http.StatusBadRequest)
 		return
 	}
 
@@ -164,16 +165,27 @@ func debugHandler(w http.ResponseWriter, r *http.Request) {
 // The main function sets up HTTP handlers for a proxy, health check, and debug endpoints, and starts a
 // server listening on port 8080.
 func main() {
-	http.HandleFunc("/", proxyHandler)
-	http.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", withCors(proxyHandler))
+	http.Handle("/health", withCors(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-	}))
-	http.HandleFunc("/debug", debugHandler)
+	})))
+	http.HandleFunc("/debug", withCors(debugHandler))
 
 	log.Println("Starting server on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// withCors is a middleware function that adds CORS headers to the response.
+func withCors(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+
+		next.ServeHTTP(w, r)
+	}
 }
