@@ -19,18 +19,21 @@ type Cache struct {
 	mutex   sync.RWMutex
 }
 
+// The NewCache function creates and returns a new Cache instance with an empty map of entries.
 func NewCache() *Cache {
 	return &Cache{
 		entries: make(map[string]CacheEntry),
 	}
 }
 
+// The `Set` method in the `Cache` struct is used to set a cache entry in the cache map.
 func (c *Cache) Set(key string, entry CacheEntry) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.entries[key] = entry
 }
 
+// The `Get` method in the `Cache` struct is used to retrieve a cache entry based on a given key.
 func (c *Cache) Get(key string) (CacheEntry, bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -38,6 +41,10 @@ func (c *Cache) Get(key string) (CacheEntry, bool) {
 	return entry, ok
 }
 
+// The `Debug()` method in the `Cache` struct is used to retrieve debug information from the cache. It
+// iterates over all entries in the cache, extracts relevant information from each entry (such as URL,
+// HTTP method, response status, and response body size), and stores this information in a map with
+// string keys and interface{} values. This map is then returned as the debug information.
 func (c *Cache) Debug() map[string]interface{} {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -55,6 +62,8 @@ func (c *Cache) Debug() map[string]interface{} {
 
 var cache = NewCache()
 
+// The `proxyHandler` function serves as a proxy that forwards HTTP requests to a target server, caches
+// responses, and forwards the responses back to the client.
 func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	targetURLParam := r.URL.Query().Get("target")
 	if targetURLParam == "" {
@@ -145,11 +154,15 @@ func proxyHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+// The debugHandler function retrieves debug information from a cache and encodes it into JSON format
+// to be sent as a response.
 func debugHandler(w http.ResponseWriter, r *http.Request) {
 	debug := cache.Debug()
 	json.NewEncoder(w).Encode(debug)
 }
 
+// The main function sets up HTTP handlers for a proxy, health check, and debug endpoints, and starts a
+// server listening on port 8080.
 func main() {
 	http.HandleFunc("/", proxyHandler)
 	http.Handle("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
